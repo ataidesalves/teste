@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela de Produção Mensal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        input[type="date"] {
+            margin-bottom: 10px;
+        }
+
+        .button-container {
+            margin-bottom: 10px;
+        }
+
+        .button-container button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tabela de Produção Mensal</h1>
+
+    <div class="button-container">
+        <label for="dataInicial">Selecione a data inicial do mês:</label>
+        <input type="date" id="dataInicial">
+        <button onclick="gerarTabela()">Gerar Tabela</button>
+        <button onclick="baixarPDF()">Baixar PDF</button>
+    </div>
+
+    <div id="tabelaContainer"></div>
+
+    <script>
+        function gerarTabela() {
+            const container = document.getElementById('tabelaContainer');
+            container.innerHTML = ''; // Limpa o conteúdo anterior
+
+            const dataInicial = document.getElementById('dataInicial').value;
+            if (!dataInicial) {
+                alert('Por favor, selecione a data inicial!');
+                return;
+            }
+
+            const data = new Date(dataInicial);
+            const ano = data.getFullYear();
+            const mes = data.getMonth() + 1; // Mês selecionado
+
+            const tabela = document.createElement('table');
+            const thead = document.createElement('thead');
+            const tbody = document.createElement('tbody');
+
+            const cabecalho = ['Data', 'Dia da Semana', 'Produção'];
+            const trHead = document.createElement('tr');
+
+            cabecalho.forEach(texto => {
+                const th = document.createElement('th');
+                th.textContent = texto;
+                trHead.appendChild(th);
+            });
+            thead.appendChild(trHead);
+            tabela.appendChild(thead);
+
+            // Define o início e o final do mês
+            data.setFullYear(ano, mes, 1); // Primeiro dia do mês
+            const ultimoDia = new Date(ano, mes + 1, 0).getDate(); // Último dia do mês
+
+            // Adiciona linhas para cada dia do mês
+            for (let dia = 1; dia <= ultimoDia; dia++) {
+                data.setDate(dia);
+                const tr = document.createElement('tr');
+
+                // Coluna 1: Data
+                const tdData = document.createElement('td');
+                tdData.textContent = data.toLocaleDateString('pt-BR');
+                tr.appendChild(tdData);
+
+                // Coluna 2: Dia da Semana
+                const tdDiaSemana = document.createElement('td');
+                tdDiaSemana.textContent = data.toLocaleDateString('pt-BR', { weekday: 'long' });
+                tr.appendChild(tdDiaSemana);
+
+                // Coluna 3: Produção (campo editável)
+                const tdProducao = document.createElement('td');
+                const inputProducao = document.createElement('input');
+                inputProducao.type = 'text';
+                tdProducao.appendChild(inputProducao);
+                tr.appendChild(tdProducao);
+
+                tbody.appendChild(tr);
+            }
+
+            tabela.appendChild(tbody);
+            container.appendChild(tabela);
+        }
+
+        async function baixarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const tabela = document.querySelector('table');
+            if (!tabela) {
+                alert('Por favor, gere a tabela antes de baixar o PDF!');
+                return;
+            }
+
+            // Define os dados e o cabeçalho para o PDF
+            const rows = [];
+            const headers = ['Data', 'Dia da Semana', 'Produção'];
+
+            Array.from(tabela.rows).forEach((row, rowIndex) => {
+                if (rowIndex > 0) { // Ignora o cabeçalho HTML
+                    const rowData = Array.from(row.cells).map((cell, cellIndex) => {
+                        if (cellIndex === 2) {
+                            const input = cell.querySelector('input');
+                            return input ? input.value : '';
+                        } else {
+                            return cell.textContent;
+                        }
+                    });
+                    rows.push(rowData);
+                }
+            });
+
+            // Configura o estilo da tabela no PDF
+            doc.autoTable({
+                head: [headers],
+                body: rows,
+                styles: {
+                    fontSize: 10, // Define fonte menor
+                    cellPadding: 2,
+                },
+                theme: 'grid',
+                margin: { top: 20 },
+            });
+
+            // Salva o PDF
+            doc.save('Tabela_Producao.pdf');
+        }
+    </script>
+</body>
+</html>
